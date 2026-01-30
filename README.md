@@ -11,29 +11,6 @@
 - MySQL 8.0+ или SQLite
 - Git
 
-## 📁 Структура проекта
-project/
-├── src/ # Laravel backend
-│ ├── app/
-│ ├── bootstrap/
-│ ├── config/
-│ ├── database/
-│ │ ├── migrations/
-│ │ ├── seeders/
-│ │ └── factories/
-│ ├── public/
-│ ├── resources/
-│ ├── routes/
-│ └── .env.example
-│
-└── blog-frontend/ # React frontend
-├── src/
-│ ├── components/
-│ ├── services/
-│ └── styles/
-├── public/
-└── package.json
-
 
 # Выполнить все миграции в папке src
 php artisan migrate
