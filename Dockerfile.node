@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+# Устанавливаем системные зависимости
+RUN apk add --no-cache \
+    git \
+    curl \
+    bash
+
+# Устанавливаем глобально create-react-app (опционально)
+RUN npm install -g create-react-app
+
+WORKDIR /app
+
+# Создаем минимальный package.json для инициализации
+RUN echo '{"name": "react-app", "version": "1.0.0", "private": true, "scripts": {"start": "react-scripts start", "build": "react-scripts build", "test": "react-scripts test", "eject": "react-scripts eject"}}' > package.json
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "if [ -f 'package.json' ] && [ -s 'package.json' ]; then npm install && npm start; else npx create-react-app . && npm start; fi"]

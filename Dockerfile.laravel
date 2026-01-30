@@ -1,0 +1,67 @@
+# Используем официальный PHP образ с Apache
+FROM php:8.2-apache
+
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    libzip-dev \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    libicu-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем расширения PHP
+RUN docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    intl \
+    zip \
+    opcache
+
+# Устанавливаем Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Включаем mod_rewrite для Apache
+RUN a2enmod rewrite
+RUN a2enmod headers
+
+# Устанавливаем рабочую директорию
+WORKDIR /var/www/html
+
+# Копируем файлы Laravel
+COPY ./src /var/www/html
+
+# Устанавливаем права
+RUN if [ -d "/var/www/html/storage" ]; then \
+        chmod -R 755 /var/www/html/storage; \
+    fi \
+    && if [ -d "/var/www/html/bootstrap/cache" ]; then \
+        chmod -R 755 /var/www/html/bootstrap/cache; \
+    fi \
+    && chown -R www-data:www-data /var/www/html
+
+# Настраиваем Apache
+COPY ./docker/apache/laravel.conf /etc/apache2/sites-available/000-default.conf
+
+# Настраиваем PHP
+COPY ./docker/php/laravel.ini /usr/local/etc/php/conf.d/laravel.ini
+
+# Устанавливаем Laravel зависимости (если есть composer.json)
+RUN if [ -f "/var/www/html/composer.json" ]; then \
+    cd /var/www/html && composer install --no-interaction --no-scripts; \
+    fi
+
+EXPOSE 80
+
+CMD ["apache2-foreground"]

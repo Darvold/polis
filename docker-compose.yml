@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # PHP Apache для Laravel
+  laravel:
+    build:
+      context: .
+      dockerfile: Dockerfile.laravel
+    container_name: laravel_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/apache/laravel.conf:/etc/apache2/sites-available/000-default.conf
+      - ./docker/php/laravel.ini:/usr/local/etc/php/conf.d/laravel.ini
+    environment:
+      - DB_HOST=mysql
+      - DB_DATABASE=${DB_DATABASE:-laravel}
+      - DB_USERNAME=${DB_USERNAME:-laravel_user}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+    networks:
+      - laravel-network
+    depends_on:
+      - mysql
+    ports:
+      - "${APP_PORT:-8000}:80"
+
+  # MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: laravel_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+      MYSQL_USER: ${DB_USERNAME:-laravel_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - laravel-network
+    ports:
+      - "3307:3306"
+
+  # Node.js для React
+  node:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: react_app
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./src:/var/www/html
+      - ./react-app:/app
+      - node_modules:/app/node_modules
+    networks:
+      - laravel-network
+    ports:
+      - "${REACT_PORT:-3000}:3000"
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - laravel
+
+  # phpMyAdmin (опционально)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: laravel_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 300M
+    networks:
+      - laravel-network
+    ports:
+      - "${PMA_PORT:-8080}:80"
+    depends_on:
+      - mysql
+
+networks:
+  laravel-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  node_modules:
